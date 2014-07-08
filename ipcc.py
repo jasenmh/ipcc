@@ -1,5 +1,6 @@
 from pyFoscamLib import FI8918W
 import sys
+import os.path
 import numpy as np
 import cv2
 import time
@@ -9,66 +10,87 @@ userName = ""
 passWord = ""
 iWidth = 640
 iHeight = 480
+class ipcc:
+	def __init__(self, ipAddr, userName, passWord):
+		self.ipAddr = ipAddr
+		self.userName = userName
+		self.passWord = passWord
 
-def main():
-	"""
-	Motion tracking code borrowed from:
-	http://derek.simkowiak.net/motion-tracking-with-python/
-	http://opencvpython.blogspot.com/2012/07/background-extraction-using-running.html
-	"""
-	cam = FI8918W.fi8918w(ipAddr, userName, passWord)
-	cam.getStatus()
-	font = cv2.FONT_HERSHEY_SIMPLEX
-	t0 = time.clock()
-	uInput = 0
-	tmpImg = cam.getSnapshotToImage()
-	irows, icols, idep = tmpImg.shape
-	convertImg = np.zeros((irows, icols, idep), np.uint8)
-	imgAvgs = np.float32(tmpImg)
-	
-	while uInput != 42:
-
-		img = cam.getSnapshotToImage()
-		if type(img) == int:	# error returns -1, else return numpy array 
-			continue
-
-		smoothImg = cv2.GaussianBlur(img, (5, 5), 0)
-		cv2.accumulateWeighted(smoothImg, imgAvgs, 0.50, None)
-		cv2.convertScaleAbs(imgAvgs, convertImg, 1.0, 0.0)
-		showImg = cv2.absdiff(smoothImg, convertImg)
-
-		tNow = time.clock()
-		tStr = str(tNow - t0)
-		cv2.putText(img, 'frm time: ' + tStr, (5, 30), font, 1, (255, 255, 255), 1)
-		cv2.putText(img, 'ir: ' + cam.irStatus, (5, 60), font, 1, (255, 255, 255), 1)
-		cv2.imshow(cam.cameraName, img)
-		cv2.imshow('Avg Image', showImg)
-
-		uInput = cv2.waitKey(1)
-
-		if uInput == ord('q'):
-			break
-		if uInput == ord('i'):
-			cam.setIr(True)
-			print "IR on"
-			cam.getStatus()
-		if uInput == ord('o'):
-			cam.setIr(False)
-			print "IR off"
-			cam.getStatus()
-
+	def run(self):
+		"""
+		Motion tracking code adapted from:
+		http://derek.simkowiak.net/motion-tracking-with-python/
+		http://opencvpython.blogspot.com/2012/07/background-extraction-using-running.html
+		"""
+		cam = FI8918W.fi8918w(self.ipAddr, self.userName, self.passWord)
+		cam.getStatus()
+		font = cv2.FONT_HERSHEY_SIMPLEX
 		t0 = time.clock()
+		uInput = 0
+		tmpImg = cam.getSnapshotToImage()
+		irows, icols, idep = tmpImg.shape
+		convertImg = np.zeros((irows, icols, idep), np.uint8)
+		imgAvgs = np.float32(tmpImg)
+		
+		while True:
 
-	cv2.destroyAllWindows()
+			img = cam.getSnapshotToImage()
+			if type(img) == int:	# error returns -1, else return numpy array 
+				continue
+
+			smoothImg = cv2.GaussianBlur(img, (5, 5), 0)
+			cv2.accumulateWeighted(smoothImg, imgAvgs, 0.50, None)
+			cv2.convertScaleAbs(imgAvgs, convertImg, 1.0, 0.0)
+			showImg = cv2.absdiff(smoothImg, convertImg)
+
+			tNow = time.clock()
+			tStr = str(tNow - t0)
+			cv2.putText(img, 'frm time: ' + tStr, (5, 30), font, 1, (255, 255, 255), 1)
+			#cv2.putText(img, 'ir: ' + cam.irStatus, (5, 60), font, 1, (255, 255, 255), 1)
+			cv2.imshow(cam.cameraName, img)
+			cv2.imshow('Avg Image', showImg)
+
+			uInput = cv2.waitKey(1)
+
+			if uInput == ord('q'):
+				break
+			if uInput == ord('i'):
+				cam.setIr(True)
+				print "IR on"
+				cam.getStatus()
+			if uInput == ord('o'):
+				cam.setIr(False)
+				print "IR off"
+				cam.getStatus()
+
+			t0 = time.clock()
+
+		cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
-	if len(sys.argv) < 4:
+	argc = len(sys.argv)
+	if argc == 2:
+		configFile = "cameras/%s" % sys.argv[1]
+		if not os.path.isfile(configFile):
+			print "unable to find configuration for camera '%s'" % sys.argv[1]
+			sys.exit()
+
+		cf = open(configFile, "r")
+		c = cf.read().split('\n')
+		cf.close()
+
+		ipAddr = c[0]
+		userName = c[1]
+		passWord = c[2]
+	elif argc == 4:
+		ipAddr = sys.argv[1]
+		userName = sys.argv[2]
+		passWord = sys.argv[3]
+	else:
 		print "expecting: %s <ip address:port> <user name> <password>" % (sys.argv[0])
 		sys.exit()
 
-	ipAddr = sys.argv[1]
-	userName = sys.argv[2]
-	passWord = sys.argv[3]
 
-	main()
+	client = ipcc(ipAddr, userName, passWord)
+	client.run()
