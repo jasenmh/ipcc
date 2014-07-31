@@ -1,3 +1,4 @@
 [submodule "pyFoscamLib"]
 	path = pyFoscamLib
 	url = git@github.com:jasenmh/pyFoscamLib.git
+    branch = feature/auth_handler
