@@ -27,13 +27,13 @@ class ipcc:
     font = cv2.FONT_HERSHEY_SIMPLEX
     t0 = time.clock()
     uInput = 0
-    tmpImg = captureImage()
+    tmpImg = self.captureImage(cam)
     irows, icols, idep = tmpImg.shape
     convertImg = np.zeros((irows, icols, idep), np.uint8)
     imgAvgs = np.float32(tmpImg)
         
     while True:
-      img = captureImage()
+      img = self.captureImage(cam)
       if type(img) == int:    # error returns -1, else return numpy array 
         continue
 
@@ -46,7 +46,7 @@ class ipcc:
       tStr = str(tNow - t0)
       cv2.putText(img, 'frm time: ' + tStr, (5, 30), font, 1, (255, 255, 255), 1)
       #cv2.putText(img, 'ir: ' + cam.irStatus, (5, 60), font, 1, (255, 255, 255), 1)
-      cv2.imshow(cam.cameraName, img)
+      cv2.imshow(cam.camera_name, img)
       cv2.imshow('Avg Image', showImg)
 
       uInput = cv2.waitKey(1)
@@ -66,7 +66,7 @@ class ipcc:
 
     cv2.destroyAllWindows()
 
-  def captureImage():
+  def captureImage(self, cam):
     tmpImgStr = cam.get_snapshot()
     nparr = np.fromstring(tmpImgStr, np.uint8)
     tmpImg = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
