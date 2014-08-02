@@ -2,3 +2,6 @@
 	path = pyFoscamLib
 	url = git@github.com:jasenmh/pyFoscamLib.git
     branch = feature/auth_handler
+[submodule "eyeballer"]
+	path = eyeballer
+	url = git@github.com:jasenmh/Eyeballer.git

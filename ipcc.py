@@ -67,7 +67,7 @@ class ipcc:
     cv2.destroyAllWindows()
 
   def captureImage(self, cam):
-    tmpImgStr = cam.get_snapshot()
+    tmpImgStr = cam.get_snapshot_old()
     nparr = np.fromstring(tmpImgStr, np.uint8)
     tmpImg = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
     return tmpImg
