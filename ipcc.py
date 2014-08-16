@@ -1,4 +1,5 @@
 from pyFoscamLib import FI8918W
+import eyeballer.eyeballer as eb
 import sys
 import os.path
 import numpy as np
@@ -10,6 +11,7 @@ userName = ""
 passWord = ""
 iWidth = 640
 iHeight = 480
+
 class ipcc:
   def __init__(self, ipAddr, userName, passWord):
     self.ipAddr = ipAddr
@@ -23,33 +25,34 @@ class ipcc:
     http://opencvpython.blogspot.com/2012/07/background-extraction-using-running.html
     """
     cam = FI8918W.fi8918w(self.ipAddr, self.userName, self.passWord)
+    ball = eb.eyeballer()
     cam.get_status()
     font = cv2.FONT_HERSHEY_SIMPLEX
     t0 = time.clock()
     uInput = 0
     tmpImg = self.captureImage(cam)
-    irows, icols, idep = tmpImg.shape
-    convertImg = np.zeros((irows, icols, idep), np.uint8)
-    imgAvgs = np.float32(tmpImg)
+    ball.add_image(tmpImg)
+    showImg = None
         
     while True:
       img = self.captureImage(cam)
+      print "Snap!"
       if type(img) == int:    # error returns -1, else return numpy array 
         continue
 
-      smoothImg = cv2.GaussianBlur(img, (5, 5), 0)
-      cv2.accumulateWeighted(smoothImg, imgAvgs, 0.50, None)
-      cv2.convertScaleAbs(imgAvgs, convertImg, 1.0, 0.0)
-      showImg = cv2.absdiff(smoothImg, convertImg)
+      showImg = ball.add_image(img)
 
       tNow = time.clock()
       tStr = str(tNow - t0)
       cv2.putText(img, 'frm time: ' + tStr, (5, 30), font, 1, (255, 255, 255), 1)
       #cv2.putText(img, 'ir: ' + cam.irStatus, (5, 60), font, 1, (255, 255, 255), 1)
       cv2.imshow(cam.camera_name, img)
-      cv2.imshow('Avg Image', showImg)
+      if showImg != None:
+        cv2.imshow('Avg Image', showImg)
 
       uInput = cv2.waitKey(1)
+
+      print "ping"
 
       if uInput == ord('q'):
         break
