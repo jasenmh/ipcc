@@ -24,6 +24,8 @@ class ipcc:
     http://derek.simkowiak.net/motion-tracking-with-python/
     http://opencvpython.blogspot.com/2012/07/background-extraction-using-running.html
     """
+
+    # setup camera, eyeballer, other necessary junk
     cam = FI8918W.fi8918w(self.ipAddr, self.userName, self.passWord)
     ball = eb.eyeballer()
     cam.get_status()
@@ -36,7 +38,7 @@ class ipcc:
         
     while True:
       img = self.captureImage(cam)
-      print "Snap!"
+      #print "Snap!"
       if type(img) == int:    # error returns -1, else return numpy array 
         continue
 
@@ -52,7 +54,7 @@ class ipcc:
 
       uInput = cv2.waitKey(1)
 
-      print "ping"
+      #print "ping"
 
       if uInput == ord('q'):
         break
