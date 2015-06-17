@@ -1,5 +1,3 @@
 cameras
 *.pyc
 .idea
-pyFoscamLib
-eyeballer

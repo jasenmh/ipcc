@@ -1,0 +1,6 @@
+[submodule "pyFoscamLib"]
+	path = pyFoscamLib
+	url = git@github.com:jasenmh/pyFoscamLib.git
+[submodule "Eyeballer"]
+	path = Eyeballer
+	url = git@github.com:jasenmh/Eyeballer.git
