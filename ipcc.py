@@ -1,106 +1,57 @@
-from pyFoscamLib import FI8918W
-import eyeballer.eyeballer as eb
-import sys
-import os.path
-import numpy as np
-import cv2
+#!/usr/bin/python
+
+import Image
+import Tkinter
+from Tkinter import PhotoImage
+import pyFoscamLib
 import time
 
-ipAddr = ""
-userName = ""
-passWord = ""
-iWidth = 640
-iHeight = 480
 
-class ipcc:
-  def __init__(self, ipAddr, userName, passWord):
-    self.ipAddr = ipAddr
-    self.userName = userName
-    self.passWord = passWord
+class Ipcc():
+    def __init__(self):
+        self.root = Tkinter.Tk()
+        self.root.title('My Pictures')
+        self.camera_width = 640
+        self.camera_height = 480
+        self.camera_response_times = [500, 500, 500, 500, 500]
+        self.camera_delay = 500
+        self.camera_img = PhotoImage(Image.new("RGB", (self.camera_width, self.camera_height), (128, 128, 128)))
+        self.camera_updated = False
+        self.camera = pyFoscamLib.CamLoader.create_camera("den")
+        self.camera_frame = 0
 
-  def run(self):
-    """
-    Motion tracking code adapted from:
-    http://derek.simkowiak.net/motion-tracking-with-python/
-    http://opencvpython.blogspot.com/2012/07/background-extraction-using-running.html
-    """
+        # make the root window the size of the image
+        self.root.geometry("%dx%d+%d+%d" % (self.camera_width, self.camera_height + 10, 0, 0))
 
-    # setup camera, eyeballer, other necessary junk
-    cam = FI8918W.fi8918w(self.ipAddr, self.userName, self.passWord)
-    ball = eb.eyeballer()
-    cam.get_status()
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    t0 = time.clock()
-    uInput = 0
-    tmpImg = self.captureImage(cam)
-    ball.add_image(tmpImg)
-    showImg = None
-        
-    while True:
-      img = self.captureImage(cam)
-      #print "Snap!"
-      if type(img) == int:    # error returns -1, else return numpy array 
-        continue
+        self.camera_panel = Tkinter.Label(self.root, image=self.camera_img)
+        self.camera_panel.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=Tkinter.YES)
+        self.root.after(self.camera_delay, self.update_camera_image)
+        self.root.mainloop()
 
-      showImg = ball.add_image(img)
+    def update_camera_image(self):
+        start_time = time.time()
+        raw_image = self.camera.get_snapshot()
+        pil_img = PhotoImage(Image.fromstring('RGB', (self.camera_width, self.camera_height), raw_image))
+        # TODO: eyeballer calls go here
+        if pil_img:
+            self.camera_img = pil_img
+            self.camera_panel.configure(image=self.camera_img)
+            self.camera_updated = True
+        else:
+            self.camera_updated = False
+        self.camera_panel.update_idletasks()
+        end_time = time.time()
 
-      tNow = time.clock()
-      tStr = str(tNow - t0)
-      cv2.putText(img, 'frm time: ' + tStr, (5, 30), font, 1, (255, 255, 255), 1)
-      #cv2.putText(img, 'ir: ' + cam.irStatus, (5, 60), font, 1, (255, 255, 255), 1)
-      cv2.imshow(cam.camera_name, img)
-      if showImg != None:
-        cv2.imshow('Avg Image', showImg)
+        self.camera_frame = (self.camera_frame + 1) % 9999
+        self.camera_response_times.pop()
+        self.camera_response_times.insert(0, end_time - start_time)
+        self.camera_delay = sum(self.camera_response_times)/len(self.camera_response_times)
 
-      uInput = cv2.waitKey(1)
+        self.root.after(self.camera_delay, self.update_camera_image)
 
-      #print "ping"
 
-      if uInput == ord('q'):
-        break
-      if uInput == ord('i'):
-        cam.ir_on()
-        print "IR on"
-        cam.get_status()
-      if uInput == ord('o'):
-        cam.ir_off()
-        print "IR off"
-        cam.get_status()
-
-      t0 = time.clock()
-
-    cv2.destroyAllWindows()
-
-  def captureImage(self, cam):
-    tmpImgStr = cam.get_snapshot_old()
-    nparr = np.fromstring(tmpImgStr, np.uint8)
-    tmpImg = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
-    return tmpImg
-
+def main():
+    app = Ipcc()
 
 if __name__ == '__main__':
-  argc = len(sys.argv)
-  if argc == 2:
-    configFile = "cameras/%s" % sys.argv[1]
-    if not os.path.isfile(configFile):
-      print "unable to find configuration for camera '%s'" % sys.argv[1]
-      sys.exit()
-
-    cf = open(configFile, "r")
-    c = cf.read().split('\n')
-    cf.close()
-
-    ipAddr = c[0]
-    userName = c[1]
-    passWord = c[2]
-  elif argc == 4:
-    ipAddr = sys.argv[1]
-    userName = sys.argv[2]
-    passWord = sys.argv[3]
-  else:
-    print "expecting: %s <ip address:port> <user name> <password>" % (sys.argv[0])
-    sys.exit()
-
-
-  client = ipcc(ipAddr, userName, passWord)
-  client.run()
+    main()
