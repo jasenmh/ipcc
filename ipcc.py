@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import Image
 import Tkinter
 from Tkinter import PhotoImage
