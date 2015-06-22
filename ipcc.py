@@ -21,8 +21,10 @@ class Ipcc():
         # make the root window the size of the image
         self.root.geometry("%dx%d+%d+%d" % (self.camera_width, self.camera_height + 10, 0, 0))
 
-        self.camera_panel = Tkinter.Label(self.root, image=self.camera_img)
+        self.camera_panel = Tkinter.Canvas(self.root, width=self.camera_width, height=self.camera_height)
         self.camera_panel.pack(side=Tkinter.TOP, fill=Tkinter.BOTH, expand=Tkinter.YES)
+        self.camera_panel.create_image(self.camera_width, self.camera_height,
+                                       image=self.camera_img)
         self.root.after(self.camera_delay, self.update_camera_image)
         self.root.mainloop()
 
@@ -33,23 +35,27 @@ class Ipcc():
         # TODO: eyeballer calls go here
         if pil_img:
             self.camera_img = pil_img
-            self.camera_panel.configure(image=self.camera_img)
+            self.camera_panel.create_image(self.camera_width, self.camera_height,
+                                           image=self.camera_img)
             self.camera_updated = True
         else:
             self.camera_updated = False
-        self.camera_panel.update_idletasks()
         end_time = time.time()
 
         self.camera_frame = (self.camera_frame + 1) % 9999
         self.camera_response_times.pop()
         self.camera_response_times.insert(0, end_time - start_time)
-        self.camera_delay = sum(self.camera_response_times)/len(self.camera_response_times)
+        self.camera_delay = sum(self.camera_response_times) / len(self.camera_response_times)
+
+        self.camera_panel.create_text(3, 3, str(self.camera_delay))
+        self.camera_panel.update_idletasks()
 
         self.root.after(self.camera_delay, self.update_camera_image)
 
 
 def main():
-    app = Ipcc()
+    Ipcc()
+
 
 if __name__ == '__main__':
     main()
