@@ -1,106 +1,71 @@
-from pyFoscamLib import FI8918W
-import eyeballer.eyeballer as eb
-import sys
-import os.path
-import numpy as np
+# http://stackoverflow.com/questions/17073227/display-an-opencv-video-in-tkinter-using-multiprocessing
+
+#import numpy as np
+from multiprocessing import Process, Queue
+#from Queue import Empty
 import cv2
-import time
+#import cv2.cv as cv
+#import ImageTk
+from PIL import Image
+#import time
+import Tkinter as Tk
+from Tkinter import PhotoImage
 
-ipAddr = ""
-userName = ""
-passWord = ""
-iWidth = 640
-iHeight = 480
 
-class ipcc:
-  def __init__(self, ipAddr, userName, passWord):
-    self.ipAddr = ipAddr
-    self.userName = userName
-    self.passWord = passWord
+# tkinter GUI functions----------------------------------------------------------
+def quit_(rooot, process):
+    process.terminate()
+    rooot.destroy()
 
-  def run(self):
-    """
-    Motion tracking code adapted from:
-    http://derek.simkowiak.net/motion-tracking-with-python/
-    http://opencvpython.blogspot.com/2012/07/background-extraction-using-running.html
-    """
 
-    # setup camera, eyeballer, other necessary junk
-    cam = FI8918W.fi8918w(self.ipAddr, self.userName, self.passWord)
-    ball = eb.eyeballer()
-    cam.get_status()
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    t0 = time.clock()
-    uInput = 0
-    tmpImg = self.captureImage(cam)
-    ball.add_image(tmpImg)
-    showImg = None
-        
+def update_image(imaage_label, queuee):
+    frame = queuee.get()
+    im = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    a = Image.fromarray(im)
+    b = PhotoImage(image=a)
+    imaage_label.configure(image=b)
+    imaage_label._image_cache = b  # avoid garbage collection
+    root.update()
+
+
+def update_all(rooot, imaage_label, queuee):
+    update_image(imaage_label, queuee)
+    root.after(0, func=lambda: update_all(rooot, imaage_label, queuee))
+
+
+#multiprocessing image processing functions-------------------------------------
+def image_capture(queuee):
+    vid_file = cv2.VideoCapture(0)
     while True:
-      img = self.captureImage(cam)
-      #print "Snap!"
-      if type(img) == int:    # error returns -1, else return numpy array 
-        continue
-
-      showImg = ball.add_image(img)
-
-      tNow = time.clock()
-      tStr = str(tNow - t0)
-      cv2.putText(img, 'frm time: ' + tStr, (5, 30), font, 1, (255, 255, 255), 1)
-      #cv2.putText(img, 'ir: ' + cam.irStatus, (5, 60), font, 1, (255, 255, 255), 1)
-      cv2.imshow(cam.camera_name, img)
-      if showImg != None:
-        cv2.imshow('Avg Image', showImg)
-
-      uInput = cv2.waitKey(1)
-
-      #print "ping"
-
-      if uInput == ord('q'):
-        break
-      if uInput == ord('i'):
-        cam.ir_on()
-        print "IR on"
-        cam.get_status()
-      if uInput == ord('o'):
-        cam.ir_off()
-        print "IR off"
-        cam.get_status()
-
-      t0 = time.clock()
-
-    cv2.destroyAllWindows()
-
-  def captureImage(self, cam):
-    tmpImgStr = cam.get_snapshot_old()
-    nparr = np.fromstring(tmpImgStr, np.uint8)
-    tmpImg = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
-    return tmpImg
+        try:
+            flag, frame = vid_file.read()
+            if flag == 0:
+                break
+            queuee.put(frame)
+            cv2.waitKey(20)
+        except:
+            continue
 
 
 if __name__ == '__main__':
-  argc = len(sys.argv)
-  if argc == 2:
-    configFile = "cameras/%s" % sys.argv[1]
-    if not os.path.isfile(configFile):
-      print "unable to find configuration for camera '%s'" % sys.argv[1]
-      sys.exit()
-
-    cf = open(configFile, "r")
-    c = cf.read().split('\n')
-    cf.close()
-
-    ipAddr = c[0]
-    userName = c[1]
-    passWord = c[2]
-  elif argc == 4:
-    ipAddr = sys.argv[1]
-    userName = sys.argv[2]
-    passWord = sys.argv[3]
-  else:
-    print "expecting: %s <ip address:port> <user name> <password>" % (sys.argv[0])
-    sys.exit()
-
-
-  client = ipcc(ipAddr, userName, passWord)
-  client.run()
+    queue = Queue()
+    print 'queue initialized...'
+    root = Tk.Tk()
+    print 'GUI initialized...'
+    image_label = Tk.Label(master=root)  # label for the video frame
+    image_label.pack()
+    print 'GUI image label initialized...'
+    p = Process(target=image_capture, args=(queue,))
+    p.start()
+    print 'image capture process has started...'
+    # quit button
+    quit_button = Tk.Button(master=root, text='Quit', command=lambda: quit_(root, p))
+    quit_button.pack()
+    print 'quit button initialized...'
+    # setup the update callback
+    root.after(0, func=lambda: update_all(root, image_label, queue))
+    print 'root.after was called...'
+    root.mainloop()
+    print 'mainloop exit'
+    p.join()
+    print 'image capture process exit'
